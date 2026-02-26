@@ -27,7 +27,7 @@ export default function Authenticate() {
         <img
           src={kiitfestImg}
           alt="KIIT Fest Logo"
-          className="w-[180px] md:w-[220px]"
+          className="w-45 md:w-55"
         />
       </div>
 
@@ -36,12 +36,12 @@ export default function Authenticate() {
         <div
           className="relative flex items-center justify-center
                      bg-contain bg-center bg-no-repeat
-                     w-[700px] h-[400px]"
+                     w-175 h-100"
           style={{ backgroundImage: `url(${midimg})` }}
         >
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col items-center gap-6 mt-10
+            className="flex flex-col items-center gap-4 mt-10
                        font-['Stardos_Stencil']"
           >
             <h1 className="text-3xl mb-2 text-black">Enter details</h1>
@@ -53,7 +53,7 @@ export default function Authenticate() {
               onChange={handleChange}
               placeholder="Name"
               required
-              className="w-[260px] h-[38px] rounded-full px-4
+              className="w-65 h-9.5 rounded-full px-4
                          bg-gray-200 border-2 border-gray-500 text-black
                          outline-none placeholder-gray-500"
             />
@@ -65,14 +65,14 @@ export default function Authenticate() {
               onChange={handleChange}
               placeholder="Roll number"
               required
-              className="w-[260px] h-[38px] rounded-full px-4
+              className="w-65 h-9.5 rounded-full px-4
                          bg-gray-200 border-2 border-gray-500 text-black
                          outline-none placeholder-gray-500"
             />
 
             <button
               type="submit"
-              className="w-[170px] h-[40px] rounded-full
+              className="w-42.5 h-10 rounded-full
                          bg-[#744F38] text-white
                          hover:scale-105 transition duration-200
                          border-none outline-none cursor-pointer"
@@ -84,19 +84,21 @@ export default function Authenticate() {
       </div>
 
       {/* 🔹 LEFT BOTTOM BOTTLES (Diagnostic) */}
-      <div className="absolute bottom-10 left-10 flex items-end -space-x-4 z-50 bg-red-500/50 p-2">
-        <img src={bottle2} alt="bottle left 1" className="w-12 z-10" />
-        <img src={bottle2} alt="bottle left 2" className="w-20" />
-        <img src={bottle2} alt="bottle left 3" className="w-16 z-10" />
-        <img src={bottle2} alt="bottle left 4" className="w-24" />
+      <div className="absolute bottom-1 left-2 flex items-end -space-x-4 z-50  p-2">
+        <img src={bottle2} alt="bottle left 1" className="w-34 z-10" />
+        <img src={bottle3} alt="bottle right 2" className="w-40 z-9" />
+        <img src={bottle3} alt="bottle right 3" className="w-32 z-10 " />
+        <img src={bottle2} alt="bottle left 2" className="w-25" />
+    
       </div>
 
       {/* 🔹 RIGHT BOTTOM BOTTLES (Diagnostic) */}
-      <div className="absolute bottom-10 right-10 flex items-end -space-x-4 z-50 bg-blue-500/50 p-2">
-        <img src={bottle3} alt="bottle right 1" className="w-16 z-10" />
-        <img src={bottle3} alt="bottle right 2" className="w-24" />
-        <img src={bottle3} alt="bottle right 3" className="w-12 z-10" />
-        <img src={bottle3} alt="bottle right 4" className="w-20" />
+      <div className="absolute bottom-1 right-2 flex items-end -space-x-4 z-50 p-2">
+        <img src={bottle2} alt="bottle left 1" className="w-34 z-10" />
+        <img src={bottle3} alt="bottle right 2" className="w-40 z-45" />
+        <img src={bottle3} alt="bottle right 3" className="w-32 z-10 " />
+        <img src={bottle2} alt="bottle left 2" className="w-25" />
+    
       </div>
     </div>
   );

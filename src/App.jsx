@@ -11,7 +11,7 @@ export default function App() {
   return (
     <>
       <Authenticate currentUser={currentUser} setCurrentUser={setCurrentUser} />
-      <div className="overflow-hidden antialiased text-neutral-200 selection:bg-neutral-200 selection:text-neutral-800 w-full and h-full">
+      <div className="overflow-hidden antialiased text-neutral-200 selection:bg-neutral-200 selection:text-neutral-800 w-full h-full">
         {currentUser.rollNo !== 0 && <Game currentUser={currentUser} />}
       </div>
     </>

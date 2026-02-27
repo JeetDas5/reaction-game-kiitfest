@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Authenticate from "./Authenticate";
-import Game from "./Game";
 import Homepage from "./Homepage";
 
 export default function App() {
@@ -24,12 +23,6 @@ export default function App() {
           <Route 
             path="/home" 
             element={<Homepage currentUser={currentUser} />} 
-          />
-
-          {/* 3. The Actual Game */}
-          <Route 
-            path="/game" 
-            element={<Game currentUser={currentUser} />} 
           />
 
           {/* Fallback */}

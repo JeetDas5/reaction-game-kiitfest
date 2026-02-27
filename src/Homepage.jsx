@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import screw from "./assets/screw.png";
 import newbg from "./assets/bg2.png";
 import kiitfestImg from "./assets/kiitfest-main-logo 20.png";
@@ -16,40 +16,8 @@ const ScrewButton = ({ style, animClass }) => (
 
 export default function Home() {
   const [isReady, setIsReady] = useState(false);
-  const [customCursor, setCustomCursor] = useState("");
-  
-  // --- GENERATE AND FORCE GLOBAL CURSOR ---
-  useEffect(() => {
-    const img = new Image();
-    img.src = bottle1;
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const size = 128; 
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d");
 
-      ctx.translate(size / 2, size / 2);
-      ctx.rotate((-30 * Math.PI) / 180); 
-      
-      const renderWidth = size / 3;
-      const renderHeight = size * 0.7;
-      ctx.drawImage(img, -renderWidth / 2, -renderHeight / 2, renderWidth, renderHeight);
-
-      const cursorUrl = `url(${canvas.toDataURL()}) 64 0, auto`;
-      setCustomCursor(cursorUrl);
-
-      // FORCE ON BODY AND HTML (Overrides everything)
-      document.documentElement.style.cursor = cursorUrl;
-      document.body.style.cursor = cursorUrl;
-    };
-
-    // CLEANUP: Reset cursor when leaving the home page
-    return () => {
-      document.documentElement.style.cursor = "auto";
-      document.body.style.cursor = "auto";
-    };
-  }, []);
+ 
 
   // 1. SCREW CONTROLS
   const topScrewsY = '-12px';     
@@ -73,9 +41,6 @@ export default function Home() {
     >
       <style>{`
         /* THE NUCLEAR OVERRIDE */
-        *, *::before, *::after, button, label, input, img, a {
-          cursor: ${customCursor} !important;
-        }
 
         @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
         @keyframes flicker {
@@ -91,7 +56,7 @@ export default function Home() {
         .btn-ready { animation: shadowPulse 2s infinite; }
         
         @keyframes shadowPulse {
-           0%, 100% { box-shadow: 0 0 8px rgba(207,123,68, 0.2); }
+           0%, 100% { box-shadow: 0 0 8px rgba(207,123,68, 0.2); }  
            50% { box-shadow: 0 0 20px rgba(207,123,68, 0.5); }
         }
 
@@ -119,10 +84,10 @@ export default function Home() {
       </div>
 
       {/* Spinning Screws */}
-      <ScrewButton style={{ top: topScrewsY, left: leftScrewsX }} animClass="animate-[spin_10s_linear_infinite]" />
-      <ScrewButton style={{ top: topScrewsY, right: rightScrewsX }} animClass="animate-[spin_15s_linear_infinite_reverse]" />
-      <ScrewButton style={{ bottom: bottomScrewsY, left: leftScrewsX }} animClass="animate-[spin_12s_linear_infinite_reverse]" />
-      <ScrewButton style={{ bottom: bottomScrewsY, right: rightScrewsX }} animClass="animate-[spin_8s_linear_infinite]" />
+      <ScrewButton style={{ top: topScrewsY, left: leftScrewsX }} animClass="animate-spin-10" />
+      <ScrewButton style={{ top: topScrewsY, right: rightScrewsX }} animClass="animate-spin-15" />
+      <ScrewButton style={{ bottom: bottomScrewsY, left: leftScrewsX }} animClass="animate-spin-12" />
+      <ScrewButton style={{ bottom: bottomScrewsY, right: rightScrewsX }} animClass="animate-spin-8" />
 
       <div className="relative z-10 flex flex-col items-center h-full px-6 py-4">
         <main className="flex-1 flex flex-col items-center justify-center w-full max-w-7xl">
@@ -159,7 +124,7 @@ export default function Home() {
             <label className={`anim-sweep-auto relative flex items-center gap-5 bg-[#0a0604]/80 backdrop-blur-md px-8 py-5 rounded-xl border transition-all duration-500 overflow-hidden shadow-xl ${isReady ? 'border-[#cf7b44]/80 scale-[1.02]' : 'border-[#8c5e3c]/40 hover:border-[#cf7b44]/50'}`}>
               <div className="relative flex items-center justify-center z-10 w-8 h-8">
                 <input type="checkbox" className="peer relative w-8 h-8 appearance-none border-2 border-[#8c5e3c] rounded-md bg-black/60 checked:bg-[#cf7b44]/20 checked:border-[#cf7b44] transition-all duration-500 checked:rotate-90" checked={isReady} onChange={(e) => setIsReady(e.target.checked)} />
-                <img src={bottle1} alt="Ready" className={`absolute h-6 w-auto object-contain pointer-events-none transition-all duration-500 ${isReady ? 'scale-100 rotate-[-90deg] opacity-100' : 'scale-0 opacity-0'}`} />
+                <img src={bottle1} alt="Ready" className={`absolute h-6 w-auto object-contain pointer-events-none transition-all duration-500 ${isReady ? 'scale-100 -rotate-90 opacity-100' : 'scale-0 opacity-0'}`} />
               </div>
               <span className={`tracking-[0.15em] font-medium select-none transition-all duration-500 z-10 ${isReady ? 'text-[#cf7b44]' : 'text-gray-400'}`}>
                 I HAVE READ THE INSTRUCTIONS AND AM READY TO PLAY

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import screw from "./assets/screw.png";
 import newbg from "./assets/bg2.png";
 import kiitfestImg from "./assets/kiitfest-main-logo 20.png";
@@ -6,37 +7,36 @@ import bottle1 from "./assets/bottle1.png";
 
 const ScrewButton = ({ style, animClass }) => (
   <div className="pointer-events-none absolute z-20" style={style}>
-    <img 
-      src={screw} 
-      alt="Screw" 
-      className={`w-24 h-24 md:w-32 md:h-32 object-contain opacity-80 drop-shadow-[0_6px_8px_rgba(0,0,0,0.9)] ${animClass}`} 
+    <img
+      src={screw}
+      alt="Screw"
+      className={`w-24 h-24 md:w-32 md:h-32 object-contain opacity-80 drop-shadow-[0_6px_8px_rgba(0,0,0,0.9)] ${animClass}`}
     />
   </div>
 );
 
 export default function Home() {
   const [isReady, setIsReady] = useState(false);
-
- 
+  const navigate = useNavigate();
 
   // 1. SCREW CONTROLS
-  const topScrewsY = '-12px';     
-  const bottomScrewsY = '-12px';  
-  const leftScrewsX = '-10px';    
-  const rightScrewsX = '-10px';   
+  const topScrewsY = "-12px";
+  const bottomScrewsY = "-12px";
+  const leftScrewsX = "-10px";
+  const rightScrewsX = "-10px";
 
   // 2. LOGO CONTROLS
-  const logoTop = '12px';         
-  const logoLeft = '550px';        
+  const logoTop = "12px";
+  const logoLeft = "550px";
 
   return (
-    <div 
+    <div
       className="h-screen w-full text-[#f2e6d9] relative overflow-hidden font-['Stardos_Stencil']"
       style={{
         backgroundImage: `url(${newbg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
       }}
     >
       <style>{`
@@ -75,19 +75,38 @@ export default function Home() {
         }
         .anim-sweep-auto:hover::before { animation: sweepPeriodic 1.5s ease-in-out infinite !important; }
       `}</style>
-      
+
       <div className="absolute inset-0 bg-black/50 pointer-events-none"></div>
 
       {/* KIITFest Logo */}
-      <div className="absolute z-30 anim-float" style={{ top: logoTop, left: logoLeft }}>
-        <img src={kiitfestImg} alt="KIITFest" className="h-14 md:h-16 w-auto object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]" />
+      <div
+        className="absolute z-30 anim-float"
+        style={{ top: logoTop, left: logoLeft }}
+      >
+        <img
+          src={kiitfestImg}
+          alt="KIITFest"
+          className="h-14 md:h-16 w-auto object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]"
+        />
       </div>
 
       {/* Spinning Screws */}
-      <ScrewButton style={{ top: topScrewsY, left: leftScrewsX }} animClass="animate-spin-10" />
-      <ScrewButton style={{ top: topScrewsY, right: rightScrewsX }} animClass="animate-spin-15" />
-      <ScrewButton style={{ bottom: bottomScrewsY, left: leftScrewsX }} animClass="animate-spin-12" />
-      <ScrewButton style={{ bottom: bottomScrewsY, right: rightScrewsX }} animClass="animate-spin-8" />
+      <ScrewButton
+        style={{ top: topScrewsY, left: leftScrewsX }}
+        animClass="animate-spin-10"
+      />
+      <ScrewButton
+        style={{ top: topScrewsY, right: rightScrewsX }}
+        animClass="animate-spin-15"
+      />
+      <ScrewButton
+        style={{ bottom: bottomScrewsY, left: leftScrewsX }}
+        animClass="animate-spin-12"
+      />
+      <ScrewButton
+        style={{ bottom: bottomScrewsY, right: rightScrewsX }}
+        animClass="animate-spin-8"
+      />
 
       <div className="relative z-10 flex flex-col items-center h-full px-6 py-4">
         <main className="flex-1 flex flex-col items-center justify-center w-full max-w-7xl">
@@ -97,41 +116,74 @@ export default function Home() {
 
           {/* Rules Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 w-full max-w-6xl px-4">
-            <div className="entrance-1 h-full"><div className="float-bob-1 h-full">
-              <div className="anim-sweep-auto relative overflow-hidden bg-[#110a06]/80 backdrop-blur-md p-8 h-full text-center rounded-xl border border-[#8c5e3c]/40 hover:border-[#cf7b44]/70 hover:scale-[1.03] transition-all duration-500 flex items-center justify-center shadow-lg">
-                <p className="relative z-10 text-xl md:text-2xl leading-snug tracking-wide text-gray-200">
-                  Test your reflexes! Press the corresponding key <span className="text-[#cf7b44] font-bold">(A, S, D)</span> when the bottle starts falling.
-                </p>
+            <div className="entrance-1 h-full">
+              <div className="float-bob-1 h-full">
+                <div className="anim-sweep-auto relative overflow-hidden bg-[#110a06]/80 backdrop-blur-md p-8 h-full text-center rounded-xl border border-[#8c5e3c]/40 hover:border-[#cf7b44]/70 hover:scale-[1.03] transition-all duration-500 flex items-center justify-center shadow-lg">
+                  <p className="relative z-10 text-xl md:text-2xl leading-snug tracking-wide text-gray-200">
+                    Test your reflexes! Press the corresponding key{" "}
+                    <span className="text-[#cf7b44] font-bold">(A, S, D)</span>{" "}
+                    when the bottle starts falling.
+                  </p>
+                </div>
               </div>
-            </div></div>
-            <div className="entrance-2 h-full"><div className="float-bob-2 h-full">
-              <div className="anim-sweep-auto relative overflow-hidden bg-[#110a06]/80 backdrop-blur-md p-8 h-full text-center rounded-xl border border-[#8c5e3c]/40 hover:border-[#cf7b44]/70 hover:scale-[1.03] transition-all duration-500 flex items-center justify-center shadow-lg">
-                <p className="relative z-10 text-xl md:text-2xl leading-snug tracking-wide text-gray-200">
-                  The faster you react, the <span className="text-[#cf7b44] font-bold">better your score</span>. Complete 5 rounds to see your ranking.
-                </p>
+            </div>
+            <div className="entrance-2 h-full">
+              <div className="float-bob-2 h-full">
+                <div className="anim-sweep-auto relative overflow-hidden bg-[#110a06]/80 backdrop-blur-md p-8 h-full text-center rounded-xl border border-[#8c5e3c]/40 hover:border-[#cf7b44]/70 hover:scale-[1.03] transition-all duration-500 flex items-center justify-center shadow-lg">
+                  <p className="relative z-10 text-xl md:text-2xl leading-snug tracking-wide text-gray-200">
+                    The faster you react, the{" "}
+                    <span className="text-[#cf7b44] font-bold">
+                      better your score
+                    </span>
+                    . Complete 5 rounds to see your ranking.
+                  </p>
+                </div>
               </div>
-            </div></div>
-            <div className="entrance-3 h-full"><div className="float-bob-3 h-full">
-              <div className="anim-sweep-auto relative overflow-hidden bg-[#110a06]/80 backdrop-blur-md p-8 h-full text-center rounded-xl border border-[#8c5e3c]/40 hover:border-[#cf7b44]/70 hover:scale-[1.03] transition-all duration-500 flex items-center justify-center shadow-lg">
-                <p className="relative z-10 text-xl md:text-2xl leading-snug tracking-wide text-gray-200">
-                  Missed or pressed the <span className="text-[#cf7b44] font-bold">wrong button</span>? Don't worry, you proceed to the next round.
-                </p>
+            </div>
+            <div className="entrance-3 h-full">
+              <div className="float-bob-3 h-full">
+                <div className="anim-sweep-auto relative overflow-hidden bg-[#110a06]/80 backdrop-blur-md p-8 h-full text-center rounded-xl border border-[#8c5e3c]/40 hover:border-[#cf7b44]/70 hover:scale-[1.03] transition-all duration-500 flex items-center justify-center shadow-lg">
+                  <p className="relative z-10 text-xl md:text-2xl leading-snug tracking-wide text-gray-200">
+                    Missed or pressed the{" "}
+                    <span className="text-[#cf7b44] font-bold">
+                      wrong button
+                    </span>
+                    ? Don't worry, you proceed to the next round.
+                  </p>
+                </div>
               </div>
-            </div></div>
+            </div>
           </div>
 
           <div className="flex flex-col items-center gap-8">
-            <label className={`anim-sweep-auto relative flex items-center gap-5 bg-[#0a0604]/80 backdrop-blur-md px-8 py-5 rounded-xl border transition-all duration-500 overflow-hidden shadow-xl ${isReady ? 'border-[#cf7b44]/80 scale-[1.02]' : 'border-[#8c5e3c]/40 hover:border-[#cf7b44]/50'}`}>
+            <label
+              className={`anim-sweep-auto relative flex items-center gap-5 bg-[#0a0604]/80 backdrop-blur-md px-8 py-5 rounded-xl border transition-all duration-500 overflow-hidden shadow-xl ${isReady ? "border-[#cf7b44]/80 scale-[1.02]" : "border-[#8c5e3c]/40 hover:border-[#cf7b44]/50"}`}
+            >
               <div className="relative flex items-center justify-center z-10 w-8 h-8">
-                <input type="checkbox" className="peer relative w-8 h-8 appearance-none border-2 border-[#8c5e3c] rounded-md bg-black/60 checked:bg-[#cf7b44]/20 checked:border-[#cf7b44] transition-all duration-500 checked:rotate-90" checked={isReady} onChange={(e) => setIsReady(e.target.checked)} />
-                <img src={bottle1} alt="Ready" className={`absolute h-6 w-auto object-contain pointer-events-none transition-all duration-500 ${isReady ? 'scale-100 -rotate-90 opacity-100' : 'scale-0 opacity-0'}`} />
+                <input
+                  type="checkbox"
+                  className="peer relative w-8 h-8 appearance-none border-2 border-[#8c5e3c] rounded-md bg-black/60 checked:bg-[#cf7b44]/20 checked:border-[#cf7b44] transition-all duration-500 checked:rotate-90"
+                  checked={isReady}
+                  onChange={(e) => setIsReady(e.target.checked)}
+                />
+                <img
+                  src={bottle1}
+                  alt="Ready"
+                  className={`absolute h-6 w-auto object-contain pointer-events-none transition-all duration-500 ${isReady ? "scale-100 -rotate-90 opacity-100" : "scale-0 opacity-0"}`}
+                />
               </div>
-              <span className={`tracking-[0.15em] font-medium select-none transition-all duration-500 z-10 ${isReady ? 'text-[#cf7b44]' : 'text-gray-400'}`}>
+              <span
+                className={`tracking-[0.15em] font-medium select-none transition-all duration-500 z-10 ${isReady ? "text-[#cf7b44]" : "text-gray-400"}`}
+              >
                 I HAVE READ THE INSTRUCTIONS AND AM READY TO PLAY
               </span>
             </label>
 
-            <button disabled={!isReady} className={`relative w-64 py-4 rounded-xl font-bold tracking-[0.2em] text-2xl border transition-all duration-500 overflow-hidden ${isReady ? "bg-[#8c5e3c] text-[#f2e6d9] border-[#cf7b44] btn-ready hover:bg-[#a66a42]" : "bg-gray-900 text-gray-600 opacity-70"}`}>
+            <button
+              disabled={!isReady}
+              onClick={() => navigate("/game")}
+              className={`relative w-64 py-4 rounded-xl font-bold tracking-[0.2em] text-2xl border transition-all duration-500 overflow-hidden ${isReady ? "bg-[#8c5e3c] text-[#f2e6d9] border-[#cf7b44] btn-ready hover:bg-[#a66a42]" : "bg-gray-900 text-gray-600 opacity-70"}`}
+            >
               START
             </button>
           </div>

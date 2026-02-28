@@ -3,19 +3,19 @@ import { useNavigate } from "react-router-dom";
 import warehouseImg from "./assets/newbg2.png";
 import kiitfestImg from "./assets/kiitfest-main-logo 20.png";
 import midimg from "./assets/mid.png";
-import screw from "./assets/screw.png"; 
+import screw from "./assets/screw.png";
 
 const ScrewDecoration = ({ style, animClass }) => (
   <div className="pointer-events-none absolute z-50" style={style}>
-    <img 
-      src={screw} 
-      alt="Screw" 
-      className={`w-20 h-20 md:w-28 md:h-28 object-contain opacity-80 drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)] ${animClass}`} 
+    <img
+      src={screw}
+      alt="Screw"
+      className={`w-20 h-20 md:w-28 md:h-28 object-contain opacity-80 drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)] ${animClass}`}
     />
   </div>
 );
 
-export default function Authenticate() {
+export default function Authenticate({ setCurrentUser }) {
   const [formData, setFormData] = useState({ kfid: "" });
   const navigate = useNavigate();
 
@@ -28,7 +28,10 @@ export default function Authenticate() {
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
-    navigate("/home"); 
+    if (typeof setCurrentUser === "function") {
+      setCurrentUser({ kfid: formData.kfid.trim() });
+    }
+    navigate("/home");
   };
 
   return (
@@ -69,18 +72,40 @@ export default function Authenticate() {
       `}</style>
 
       {/* Breathing Background Layer */}
-      <div className="absolute inset-0 bg-black pointer-events-none" style={{ animation: 'bgPulse 8s infinite ease-in-out' }}></div>
+      <div
+        className="absolute inset-0 bg-black pointer-events-none"
+        style={{ animation: "bgPulse 8s infinite ease-in-out" }}
+      ></div>
 
       {/* --- LOGO --- */}
-      <div className="absolute top-0 left-0 w-full flex justify-center z-50 anim-float" style={{ paddingTop: logoTop }}>
-        <img src={kiitfestImg} alt="KIIT Fest Logo" className="w-48 md:w-56 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]" />
+      <div
+        className="absolute top-0 left-0 w-full flex justify-center z-50 anim-float"
+        style={{ paddingTop: logoTop }}
+      >
+        <img
+          src={kiitfestImg}
+          alt="KIIT Fest Logo"
+          className="w-48 md:w-56 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]"
+        />
       </div>
 
       {/* --- SCREWS --- */}
-      <ScrewDecoration style={{ top: screwOffset, left: screwOffset }} animClass="animate-spin-18" />
-      <ScrewDecoration style={{ top: screwOffset, right: screwOffset }} animClass="animate-spin-22" />
-      <ScrewDecoration style={{ bottom: screwOffset, left: screwOffset }} animClass="animate-spin-14" />
-      <ScrewDecoration style={{ bottom: screwOffset, right: screwOffset }} animClass="animate-spin-10" />
+      <ScrewDecoration
+        style={{ top: screwOffset, left: screwOffset }}
+        animClass="animate-spin-18"
+      />
+      <ScrewDecoration
+        style={{ top: screwOffset, right: screwOffset }}
+        animClass="animate-spin-22"
+      />
+      <ScrewDecoration
+        style={{ bottom: screwOffset, left: screwOffset }}
+        animClass="animate-spin-14"
+      />
+      <ScrewDecoration
+        style={{ bottom: screwOffset, right: screwOffset }}
+        animClass="animate-spin-10"
+      />
 
       {/* --- FORM CENTER --- */}
       <div className="w-full h-full flex items-center justify-center relative z-20">
@@ -88,7 +113,10 @@ export default function Authenticate() {
           className="relative flex items-center justify-center bg-contain bg-center bg-no-repeat w-[95%] max-w-187.5 h-112.5 transition-all duration-500 hover:brightness-110"
           style={{ backgroundImage: `url(${midimg})` }}
         >
-          <form onSubmit={handleSubmit} className="flex flex-col items-center gap-6 mb-4 relative z-10">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col items-center gap-6 mb-4 relative z-10"
+          >
             <h1 className="text-4xl md:text-5xl text-black font-bold tracking-[0.2em] anim-flicker uppercase">
               Enter KFID
             </h1>
@@ -116,4 +144,4 @@ export default function Authenticate() {
       </div>
     </div>
   );
-}      
+}

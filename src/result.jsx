@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import gameBg from "./assets/bg2.png";
-import kiitfestImg from "./assets/kiitfest-main-logo 20.png";
+import kiitfestImg from "./assets/kiitfest-main-logo20.png";
 
 const TOTAL_ROUNDS = 5;
 
@@ -183,7 +182,7 @@ export default function Result({ currentUser }) {
     <div
       className="min-h-screen w-full relative overflow-hidden font-['Stardos_Stencil'] text-[#f2e6d9]"
       style={{
-        backgroundImage: `url(${gameBg})`,
+        backgroundImage: "url(/assets/bg2.png)",
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}

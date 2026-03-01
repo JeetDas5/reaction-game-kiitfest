@@ -5,114 +5,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PAYMENT_VALIDATE_URL = "https://pvs.kiitfest.org/api/validate";
-
-let prisma = null;
-let prismaInitTried = false;
-let prismaInitError = null;
-
-const ensurePrisma = async () => {
-  if (prisma) return prisma;
-  if (prismaInitTried && prismaInitError) return null;
-
-  prismaInitTried = true;
-  try {
-    const prismaModule = await import("@prisma/client");
-    const PrismaClient =
-      prismaModule?.PrismaClient || prismaModule?.default?.PrismaClient;
-
-    if (!PrismaClient) {
-      throw new Error("PrismaClient export not found.");
-    }
-
-    prisma = new PrismaClient();
-    prismaInitError = null;
-    console.log("[db] Prisma client initialized");
-    return prisma;
-  } catch (error) {
-    prismaInitError = error;
-    console.error("[db] Prisma initialization failed", {
-      message: error?.message || "Unknown Prisma error",
-    });
-    return null;
+// generate a KF id of the form 'KF' + 8 digits, ensuring uniqueness
+async function generateUniqueKfId() {
+  while (true) {
+    const num = Math.floor(Math.random() * 1e8).toString().padStart(8, '0');
+    const id = `KF${num}`;
+    const exists = await prisma.user.findUnique({ where: { KFid: id } });
+    if (!exists) return id;
+    // else loop and try again
   }
-};
-
-const withPrisma = async (res) => {
-  const db = await ensurePrisma();
-  if (db) return db;
-
-  res.status(503).json({
-    ok: false,
-    error:
-      "Database service unavailable. Run `npm run prisma:generate` and restart server.",
-  });
-  return null;
-};
-
-app.post("/api/validate", async (req, res) => {
-  try {
-    const rawKfid = req?.body?.kfid;
-    const kfid =
-      typeof rawKfid === "string" ? rawKfid.trim().toUpperCase() : "";
-
-    console.log("[validate] incoming request", {
-      hasBody: Boolean(req?.body),
-      rawType: typeof rawKfid,
-      normalizedKfid: kfid,
-    });
-
-    if (!kfid || !/^KF\d{8}$/.test(kfid)) {
-      console.warn("[validate] rejected invalid kfid format", { kfid });
-      return res.status(200).json({
-        success: false,
-        message: "Invalid KFID format. Use KF followed by 8 digits.",
-      });
-    }
-
-    const { data } = await axios.post(
-      PAYMENT_VALIDATE_URL,
-      { kfid },
-      {
-        headers: { "Content-Type": "application/json" },
-        timeout: 12000,
-      },
-    );
-
-    console.log("[validate] upstream success", {
-      kfid,
-      success: data?.success,
-      message: data?.message,
-    });
-
-    return res.status(200).json(data);
-  } catch (error) {
-    const upstreamStatus = error?.response?.status;
-    const upstreamData = error?.response?.data;
-
-    console.error("[validate] upstream error", {
-      status: upstreamStatus || null,
-      code: error?.code || null,
-      message: error?.message || null,
-      responseMessage: upstreamData?.message || null,
-    });
-
-    if (upstreamStatus === 200 && upstreamData) {
-      return res.status(200).json(upstreamData);
-    }
-
-    if (upstreamStatus === 500) {
-      return res
-        .status(500)
-        .json({ success: false, message: "Internal server error" });
-    }
-
-    const message =
-      upstreamData?.message || error?.message || "Internal server error";
-
-    return res.status(500).json({ success: false, message });
-  }
-});
+}
 
 // POST /api/user - upsert a user by roll
 app.post("/api/user", async (req, res) => {
@@ -121,11 +23,12 @@ app.post("/api/user", async (req, res) => {
     if (!db) return;
 
     const { name, rollNo } = req.body;
-    if (!rollNo) return res.status(400).json({ error: "rollNo required" });
-    const user = await db.user.upsert({
+    if (!rollNo) return res.status(400).json({ error: 'rollNo required' });
+    const kfid = await generateUniqueKfId();
+    const user = await prisma.user.upsert({
       where: { rollNo: Number(rollNo) },
       update: { name: name || undefined },
-      create: { name: name || `Player ${rollNo}`, rollNo: Number(rollNo) },
+      create: { name: name || `Player ${rollNo}`, rollNo: Number(rollNo), KFid: kfid }
     });
     return res.json({ ok: true, user });
   } catch (err) {
@@ -161,11 +64,12 @@ app.post("/api/results", async (req, res) => {
       // pad with nulls if shorter
       while (processedRounds.length < TOTAL_ROUNDS) processedRounds.push(null);
     }
-    // upsert user
-    await db.user.upsert({
+    // upsert user (ensure KFid on create)
+    const kfid = await generateUniqueKfId();
+    await prisma.user.upsert({
       where: { rollNo: Number(rollNo) },
       update: { name: name || undefined },
-      create: { name: name || `Player ${rollNo}`, rollNo: Number(rollNo) },
+      create: { name: name || `Player ${rollNo}`, rollNo: Number(rollNo), KFid: kfid }
     });
     // upsert record (store processedRounds if provided)
     const rec = await db.record.upsert({

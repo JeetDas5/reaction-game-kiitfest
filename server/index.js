@@ -2,11 +2,11 @@ import express from "express";
 import cors from "cors";
 import axios from "axios";
 
+const PAYMENT_VALIDATE_URL = process.env.NEXT_BASE_URL;
+
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-const PAYMENT_VALIDATE_URL = "https://pvs.kiitfest.org/api/validate";
 
 let prisma = null;
 let prismaInitTried = false;

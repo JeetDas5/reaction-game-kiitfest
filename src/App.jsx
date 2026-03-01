@@ -9,6 +9,7 @@ import Authenticate from "./Authenticate";
 import Homepage from "./Homepage";
 import Game from "./Game";
 import Result from "./result";
+import ProtectedRoute from "./middleware/ProtectedRoute";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState({
@@ -33,14 +34,29 @@ export default function App() {
           {/* 2. Selection Page */}
           <Route
             path="/home"
-            element={<Homepage currentUser={currentUser} />}
+            element={
+              <ProtectedRoute currentUser={currentUser}>
+                <Homepage currentUser={currentUser} />
+              </ProtectedRoute>
+            }
           />
 
-          <Route path="/game" element={<Game currentUser={currentUser} />} />
+          <Route
+            path="/game"
+            element={
+              <ProtectedRoute currentUser={currentUser}>
+                <Game currentUser={currentUser} />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/result"
-            element={<Result currentUser={currentUser} />}
+            element={
+              <ProtectedRoute currentUser={currentUser}>
+                <Result currentUser={currentUser} />
+              </ProtectedRoute>
+            }
           />
 
           {/* Fallback */}

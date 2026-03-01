@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import screw from "./assets/screw.png";
-import newbg from "./assets/bg2.png";
+import newbg from "./assets/Bg2.png";
 import kiitfestImg from "./assets/kiitfest-main-logo 20.png";
 import bottle1 from "./assets/bottle1.png";
 

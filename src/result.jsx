@@ -12,8 +12,6 @@ export default function Result({ currentUser }) {
   const [roundTimes, setRoundTimes] = useState(null);
   const [bestTime, setBestTime] = useState(null);
   const [leaderboard, setLeaderboard] = useState(null);
-
-  const logoUrl = encodeURI("/kiitfest-main-logo 3.svg");
   const rect37Url = encodeURI("/Rectangle 37.svg");
 
   function normalizeRounds(rt) {
@@ -113,6 +111,14 @@ export default function Result({ currentUser }) {
       setBestTime(null);
     })();
   }, [location, navigate]);
+
+  useEffect(() => {
+    const redirectTimer = setTimeout(() => {
+      navigate("/", { replace: true });
+    }, 30000);
+
+    return () => clearTimeout(redirectTimer);
+  }, [navigate]);
 
   const currentKfid = useMemo(() => {
     const st = (location && location.state) || {};
@@ -262,14 +268,6 @@ export default function Result({ currentUser }) {
               </tbody>
             </table>
           </div>
-        </div>
-
-        <div className="mt-auto pt-8 w-full flex justify-end opacity-70">
-          <img
-            src={logoUrl}
-            alt="corner-logo"
-            className="w-32 md:w-40 h-auto"
-          />
         </div>
       </div>
     </div>

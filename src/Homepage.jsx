@@ -182,7 +182,7 @@ export default function Home() {
             <button
               disabled={!isReady}
               onClick={() => navigate("/game")}
-              className={`relative w-64 py-4 rounded-xl font-bold tracking-[0.2em] text-2xl border transition-all duration-500 overflow-hidden ${isReady ? "bg-[#8c5e3c] text-[#f2e6d9] border-[#cf7b44] btn-ready hover:bg-[#a66a42]" : "bg-gray-900 text-gray-600 opacity-70"}`}
+              className={`relative w-64 py-4 rounded-xl font-bold tracking-[0.2em] text-2xl border transition-all duration-500 overflow-hidden cursor-pointer ${isReady ? "bg-[#8c5e3c] text-[#f2e6d9] border-[#cf7b44] btn-ready hover:bg-[#a66a42]" : "bg-gray-900 text-gray-600 opacity-70"}`}
             >
               START
             </button>

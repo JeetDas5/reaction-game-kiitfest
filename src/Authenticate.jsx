@@ -1,9 +1,31 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import warehouseImg from "./assets/newbg2.png";
 import kiitfestImg from "./assets/kiitfest-main-logo 20.png";
 import midimg from "./assets/mid.png";
 import screw from "./assets/screw.png";
+
+const VALIDATE_API_URL = "/api/validate";
+const DIRECT_VALIDATE_API_URL = "https://pvs.kiitfest.org/api/validate";
+const KFID_STORAGE_KEY = "checked-kfid-participants";
+
+const getCheckedKfids = () => {
+  try {
+    const raw = window.localStorage.getItem(KFID_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveCheckedKfid = (kfid) => {
+  const current = getCheckedKfids();
+  if (current.includes(kfid)) return;
+  const next = [...current, kfid];
+  window.localStorage.setItem(KFID_STORAGE_KEY, JSON.stringify(next));
+};
 
 const ScrewDecoration = ({ style, animClass }) => (
   <div className="pointer-events-none absolute z-50" style={style}>
@@ -17,21 +39,115 @@ const ScrewDecoration = ({ style, animClass }) => (
 
 export default function Authenticate({ setCurrentUser }) {
   const [formData, setFormData] = useState({ kfid: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
 
   const screwOffset = "-10px";
   const logoTop = "20px";
 
   const handleChange = (e) => {
+    setErrorMessage("");
+    setStatusMessage("");
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    if (typeof setCurrentUser === "function") {
-      setCurrentUser({ kfid: formData.kfid.trim() });
+
+    const normalizedKfid = formData.kfid.trim().toUpperCase();
+
+    if (!normalizedKfid) {
+      setErrorMessage("KFID is required.");
+      return;
     }
-    navigate("/home");
+
+    if (!/^KF\d{8}$/.test(normalizedKfid)) {
+      setErrorMessage(
+        "KFID must be in format KF + 8 digits (e.g. KF12345678).",
+      );
+      return;
+    }
+
+    const alreadyChecked = getCheckedKfids().includes(normalizedKfid);
+    if (alreadyChecked) {
+      setErrorMessage(
+        "This participant has already been checked and cannot play again.",
+      );
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+    setStatusMessage("Validating payment...");
+
+    try {
+      let data = null;
+
+      try {
+        const localResponse = await axios.post(
+          VALIDATE_API_URL,
+          {
+            kfid: normalizedKfid,
+          },
+          { timeout: 12000 },
+        );
+        data = localResponse?.data || null;
+      } catch (localError) {
+        const isLocalUnavailable =
+          !localError?.response &&
+          (localError?.code === "ERR_NETWORK" ||
+            localError?.code === "ECONNABORTED");
+
+        if (!isLocalUnavailable) {
+          throw localError;
+        }
+
+        const fallbackResponse = await axios.post(
+          DIRECT_VALIDATE_API_URL,
+          {
+            kfid: normalizedKfid,
+          },
+          { timeout: 12000 },
+        );
+        data = fallbackResponse?.data || null;
+      }
+
+      if (data?.success) {
+        saveCheckedKfid(normalizedKfid);
+
+        if (typeof setCurrentUser === "function") {
+          setCurrentUser({
+            kfid: normalizedKfid,
+            name: data?.data?.name || "",
+            email: data?.data?.email || "",
+          });
+        }
+
+        setStatusMessage("Payment verified. Redirecting...");
+        navigate("/home");
+        return;
+      }
+
+      setErrorMessage(data?.message || "Payment not done or KFID missing.");
+    } catch (error) {
+      if (error?.response?.status === 500) {
+        setErrorMessage("Internal server error. Please try again.");
+        return;
+      }
+
+      if (error?.response?.data?.message) {
+        setErrorMessage(error.response.data.message);
+        return;
+      }
+
+      setErrorMessage(
+        "Validation service unreachable. Please check internet/server and try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -128,16 +244,30 @@ export default function Authenticate({ setCurrentUser }) {
                 value={formData.kfid}
                 onChange={handleChange}
                 placeholder="KFID"
+                maxLength={10}
                 required
-                className="w-80 h-14 rounded-full px-8 bg-white/95 border-2 border-stone-400 text-black font-bold text-lg outline-none placeholder-stone-400 uppercase shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] transition-all focus:border-[#744F38] focus:shadow-[0_0_15px_rgba(116,79,56,0.3)]"
+                className="w-96 h-14 rounded-full px-8 bg-white/95 border-2 border-stone-400 text-black font-bold text-lg outline-none placeholder-stone-400 uppercase shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] transition-all focus:border-[#744F38] focus:shadow-[0_0_15px_rgba(116,79,56,0.3)]"
               />
             </div>
 
+            {errorMessage ? (
+              <p className="text-red-300 text-center text-base md:text-lg max-w-md">
+                {errorMessage}
+              </p>
+            ) : null}
+
+            {!errorMessage && statusMessage ? (
+              <p className="text-[#ffbf75] text-center text-base md:text-lg max-w-md">
+                {statusMessage}
+              </p>
+            ) : null}
+
             <button
               type="submit"
-              className={`w-52 h-14 rounded-full bg-[#744F38] text-white text-2xl font-bold tracking-widest transition-all border-b-4 border-[#3a261a] active:border-b-0 active:translate-y-1 btn-active-glow uppercase`}
+              disabled={isSubmitting}
+              className={`w-52 h-14 rounded-full bg-[#744F38] text-white text-2xl font-bold tracking-widest transition-all border-b-4 border-[#3a261a] active:border-b-0 active:translate-y-1 btn-active-glow uppercase cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed`}
             >
-              Submit
+              {isSubmitting ? "Checking..." : "Submit"}
             </button>
           </form>
         </div>

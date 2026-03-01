@@ -1,19 +1,32 @@
 import React, { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import useGame from "./hooks/useGame";
-import gameBg from "./assets/bg2.png";
-import bottleImage from "./assets/bottle1.png";
+import bgImg from "./assets/bg2.png";
 import kiitfestImg from "./assets/kiitfest-main-logo 20.png";
+import screw from "./assets/screw.png";
+import bottleImg from "./assets/bottle1.png";
+
+const KEYS = ["a", "s", "d"];
+
+const ScrewDecoration = ({ style, animClass }) => (
+  <div className="pointer-events-none absolute z-20" style={style}>
+    <img
+      src={screw}
+      alt="Screw"
+      className={`w-20 h-20 md:w-28 md:h-28 object-contain opacity-80 drop-shadow-[0_4px_6px_rgba(0,0,0,0.9)] ${animClass}`}
+    />
+  </div>
+);
 
 export default function Game({ currentUser }) {
   const navigate = useNavigate();
 
   const rect37Url = encodeURI("/Rectangle 37.svg");
   const rect18Url = encodeURI("/Rectangle 18.svg");
-  const logoUrl = encodeURI("/kiitfest-main-logo 3.svg");
-  const currentKfid = currentUser && currentUser.kfid ? currentUser.kfid : "";
 
   const {
+    activeKey,
+    setActiveKey,
     level,
     awaitingStart,
     startPrompt,
@@ -23,6 +36,7 @@ export default function Game({ currentUser }) {
     bestTime,
     roundTimes,
     timeToNextDrop,
+    forceMiss,
     handleInput,
   } = useGame({
     TOTAL_ROUNDS: 5,
@@ -32,204 +46,265 @@ export default function Game({ currentUser }) {
           rounds,
           bestTime: finalBestTime,
           played: true,
-          kfid: currentKfid,
+          kfid:
+            currentUser && typeof currentUser.kfid === "string"
+              ? currentUser.kfid
+              : "",
         },
       });
     },
   });
 
   const handleInputRef = useRef(handleInput);
+  const forceMissRef = useRef(forceMiss);
+  const pressedKeysRef = useRef(new Set());
+
   useEffect(() => {
     handleInputRef.current = handleInput;
   }, [handleInput]);
 
   useEffect(() => {
-    const onKeyDown = (e) => handleInputRef.current(e.key.toLowerCase());
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+    forceMissRef.current = forceMiss;
+  }, [forceMiss]);
 
-  const formatRoundValue = (value) => {
-    if (typeof value === "number") return `${Math.round(value)}ms`;
-    if (value === "missed") return <span className="text-red-400">Missed</span>;
-    return <span className="opacity-30">--</span>;
+  useEffect(() => {
+    const pressedKeys = pressedKeysRef.current;
+
+    const onKeyDown = (event) => {
+      const key = String(event.key).toLowerCase();
+      if (!KEYS.includes(key)) return;
+
+      if (event.repeat) return;
+
+      pressedKeys.add(key);
+      if (pressedKeys.size >= 2) {
+        setActiveKey(null);
+        forceMissRef.current();
+        return;
+      }
+
+      setActiveKey(key);
+      handleInputRef.current(key);
+    };
+
+    const onKeyUp = (event) => {
+      const key = String(event.key).toLowerCase();
+      if (!KEYS.includes(key)) return;
+      pressedKeys.delete(key);
+
+      const remaining = Array.from(pressedKeys);
+      setActiveKey(remaining.length === 1 ? remaining[0] : null);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+
+    return () => {
+      pressedKeys.clear();
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [setActiveKey]);
+
+  const formatRound = (value) => {
+    if (typeof value === "number") return `${Math.round(value)} ms`;
+    if (value === "missed") return "MISSED";
+    return "--";
   };
 
   return (
     <div
-      className="min-h-screen w-full relative overflow-hidden font-['Stardos_Stencil'] text-[#f2e6d9] selection:bg-[#8c5e3c]"
-      style={{
-        backgroundImage: `url(${gameBg})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
+      className="relative w-full h-screen bg-cover bg-center bg-no-repeat overflow-hidden font-['Stardos_Stencil'] text-[#f2e6d9]"
+      style={{ backgroundImage: `url(${bgImg})` }}
     >
-      {/* Dynamic Keyframes */}
       <style>{`
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
-        @keyframes flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        @keyframes bottleDropToGround { 
-          0% { transform: translateY(-130px) rotate(-15deg); opacity: 0; }
-          20% { opacity: 1; }
-          100% { transform: translateY(0px) rotate(5deg); opacity: 1; }
+        @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-12px); } }
+        @keyframes flicker {
+          0%, 19.9%, 22%, 62.9%, 64%, 64.9%, 70%, 100% { opacity: 1; text-shadow: 0 0 8px rgba(207,123,68,0.45); }
+          20%, 21.9%, 63%, 63.9%, 65%, 69.9% { opacity: 0.8; text-shadow: none; }
         }
-        @keyframes bottleIdle { 0%, 100% { transform: translateY(0px) rotate(-5deg); } 50% { transform: translateY(-8px) rotate(5deg); } }
-        .anim-float { animation: float 5s ease-in-out infinite; }
-        .anim-flicker { animation: flicker 2s ease-in-out infinite; }
-        .bottle-fall-ground { animation: bottleDropToGround 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-        .bottle-idle { animation: bottleIdle 3s ease-in-out infinite; }
-        .glass-panel { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); border: 1px solid rgba(140, 94, 60, 0.3); }
+        @keyframes bottleFall {
+          0% { transform: translateY(-120px) rotate(-12deg); opacity: 0.85; }
+          100% { transform: translateY(0) rotate(8deg); opacity: 1; }
+        }
+        @keyframes bottleIdle {
+          0%,100% { transform: translateY(0px) rotate(-8deg); }
+          50% { transform: translateY(-5px) rotate(6deg); }
+        }
+        .anim-float { animation: float 6s ease-in-out infinite; }
+        .anim-flicker { animation: flicker 3.2s infinite alternate; }
+        .bottle-fall { animation: bottleFall 0.8s ease-out forwards; }
+        .bottle-idle { animation: bottleIdle 2.6s ease-in-out infinite; }
+        .panel-glow { box-shadow: 0 12px 32px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(207,123,68,0.08); }
       `}</style>
 
-      {/* Overlay for Atmosphere */}
-      <div className="absolute inset-0 bg-linear-to-b from-black/70 via-black/40 to-black/80 pointer-events-none" />
+      <div className="absolute inset-0 bg-black/55 pointer-events-none" />
+      <div className="absolute inset-0 bg-linear-to-b from-black/20 via-transparent to-black/35 pointer-events-none" />
 
-      <div className="relative z-10 w-full h-full min-h-screen px-4 py-6 flex flex-col items-center">
-        {/* Header Logo */}
-        <div className="mb-8 anim-float">
+      <ScrewDecoration
+        style={{ top: "-10px", left: "-10px" }}
+        animClass="animate-spin-18"
+      />
+      <ScrewDecoration
+        style={{ top: "-10px", right: "-10px" }}
+        animClass="animate-spin-22"
+      />
+      <ScrewDecoration
+        style={{ bottom: "-10px", left: "-10px" }}
+        animClass="animate-spin-14"
+      />
+      <ScrewDecoration
+        style={{ bottom: "-10px", right: "-10px" }}
+        animClass="animate-spin-10"
+      />
+
+      <div className="relative z-10 h-full px-4 py-3 flex flex-col items-center overflow-hidden">
+        <div className="w-full flex justify-center pt-1 pb-2 anim-float">
           <img
             src={kiitfestImg}
-            alt="logo"
-            className="w-48 md:w-64 drop-shadow-[0_0_25px_rgba(217,160,103,0.3)]"
+            alt="KIITFest"
+            className="w-44 md:w-56 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]"
           />
         </div>
 
-        {/* Main Console */}
-        <div className="relative w-full max-w-5xl flex flex-col lg:flex-row gap-6 items-start justify-center">
-          {/* Side Panel: Leaderboard/Timing */}
-          <div className="w-full lg:w-64 glass-panel rounded-2xl overflow-hidden shadow-2xl order-2 lg:order-1">
-            <div className="px-4 py-3 bg-[#8c5e3c]/20 border-b border-[#8c5e3c]/30 text-[#d9a067] font-bold text-center tracking-widest uppercase text-sm">
-              Session History
-            </div>
-            <table className="w-full text-sm">
-              <tbody>
-                {roundTimes.map((value, index) => (
-                  <tr
-                    key={index}
-                    className="border-b border-[#8c5e3c]/10 hover:bg-white/5 transition-colors"
+        <div className="text-center mb-3 px-3">
+          <h1 className="text-3xl md:text-5xl font-black tracking-[0.18em] text-[#f2e6d9] drop-shadow-[0_5px_6px_rgba(0,0,0,0.75)]">
+            REACTION GAME
+          </h1>
+        </div>
+
+        <div className="w-full max-w-6xl bg-[#0a0604]/72 border border-[#8c5e3c]/50 rounded-3xl backdrop-blur-md p-4 md:p-6 shadow-2xl panel-glow">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+            {[
+              { title: "ROUND", value: `${level}/5`, isMiss: false },
+              {
+                title: "NEXT DROP",
+                value:
+                  timeToNextDrop == null
+                    ? "--"
+                    : `${Math.ceil(timeToNextDrop / 1000)}s`,
+                isMiss: false,
+              },
+              {
+                title: "LAST HIT",
+                value:
+                  typeof lastTime === "number"
+                    ? `${Math.round(lastTime)} ms`
+                    : lastMissed
+                      ? "MISS"
+                      : "--",
+                isMiss: lastMissed,
+              },
+            ].map((card) => (
+              <div
+                key={card.title}
+                className="relative h-22 md:h-24 transition-transform duration-300 hover:scale-[1.02]"
+              >
+                <img
+                  src={rect37Url}
+                  alt={card.title}
+                  className="w-full h-full object-fill"
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <div className="text-xs md:text-sm tracking-[0.24em] text-[#d9a067] uppercase font-bold">
+                    {card.title}
+                  </div>
+                  <div
+                    className={`text-xl md:text-3xl font-black mt-1 ${card.isMiss ? "text-red-400" : "text-white"}`}
                   >
-                    <td className="py-2.5 px-4 text-[#d9a067]/70">
-                      Round {index + 1}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-mono">
-                      {formatRoundValue(value)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="p-4 bg-black/40 text-center">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[#d9a067]/50 mb-1">
-                Personal Best
-              </p>
-              <span className="text-xl text-[#ffbf75]">
-                {typeof bestTime === "number"
-                  ? `${Math.round(bestTime)}ms`
-                  : "--"}
-              </span>
+                    {card.value}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mb-6 min-h-12 flex items-center justify-center">
+            <div className="px-8 py-2 rounded-full bg-black/40 border border-[#8c5e3c]/45 inline-flex items-center justify-center min-h-12.5">
+              <h2
+                className={`text-lg md:text-2xl anim-flicker ${lastMissed && !dropKey ? "text-red-400" : "text-[#ffbf75]"}`}
+              >
+                {awaitingStart
+                  ? startPrompt
+                  : dropKey
+                    ? `PRESS [ ${dropKey.toUpperCase()} ]`
+                    : lastMissed
+                      ? "MISSED! STAY SHARP"
+                      : "GET READY..."}
+              </h2>
             </div>
           </div>
 
-          {/* Center Stage */}
-          <div className="flex-1 w-full order-1 lg:order-2">
-            <div className="glass-panel rounded-4xl p-6 md:p-8 shadow-2xl relative overflow-hidden">
-              {/* Stats Bar */}
-              <div className="grid grid-cols-3 gap-3 md:gap-6 mb-10">
-                {[
-                  { title: "ROUND", value: `${level}/5` },
-                  {
-                    title: "NEXT DROP",
-                    value:
-                      timeToNextDrop == null
-                        ? "--"
-                        : `${Math.ceil(timeToNextDrop / 1000)}s`,
-                  },
-                  {
-                    title: "LAST HIT",
-                    value:
-                      typeof lastTime === "number"
-                        ? `${Math.round(lastTime)}ms`
-                        : lastMissed
-                          ? "MISS"
-                          : "--",
-                  },
-                ].map((card) => (
-                  <div key={card.title} className="relative group">
+          <div className="grid grid-cols-3 gap-4 md:gap-10 mb-4">
+            {KEYS.map((keyLabel) => {
+              const isTarget = dropKey === keyLabel && !awaitingStart;
+              const isPressed = activeKey === keyLabel;
+              return (
+                <div
+                  key={keyLabel}
+                  className={`flex flex-col items-center rounded-xl py-2 transition-colors ${isTarget ? "bg-[#8c5e3c]/15" : "bg-black/15"}`}
+                >
+                  <button
+                    onMouseDown={() => setActiveKey(keyLabel)}
+                    onMouseUp={() => setActiveKey(null)}
+                    onMouseLeave={() => setActiveKey(null)}
+                    onClick={() => handleInput(keyLabel)}
+                    className={`relative w-20 h-20 md:w-28 md:h-28 transition-transform duration-150 active:scale-90 hover:scale-105 cursor-pointer ${isPressed ? "scale-95" : ""}`}
+                    aria-label={`key-${keyLabel}`}
+                  >
                     <img
-                      src={rect37Url}
-                      className="w-full h-20 md:h-24 object-fill opacity-80 group-hover:opacity-100 transition-opacity"
-                      alt=""
+                      src={rect18Url}
+                      alt={`${keyLabel}-button`}
+                      className={`absolute inset-0 w-full h-full object-fill ${isTarget ? "brightness-125" : ""}`}
                     />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-[10px] md:text-xs tracking-[0.3em] text-[#d9a067]/80 uppercase">
-                        {card.title}
-                      </span>
-                      <span className="text-xl md:text-3xl font-black text-[#f2e6d9] drop-shadow-md">
-                        {card.value}
-                      </span>
-                    </div>
+                    <span
+                      className={`absolute inset-0 flex items-center justify-center text-3xl md:text-5xl font-black ${isTarget ? "text-white" : "text-[#d9a067]"}`}
+                    >
+                      {keyLabel.toUpperCase()}
+                    </span>
+                  </button>
+
+                  <div className="relative mt-5 h-40 md:h-56 w-full flex items-end justify-center">
+                    <div className="absolute top-0 w-px h-full bg-linear-to-b from-[#8c5e3c]/50 to-transparent" />
+                    <img
+                      src={bottleImg}
+                      alt={`${keyLabel}-bottle`}
+                      className={`w-20 md:w-28 h-auto drop-shadow-[0_18px_20px_rgba(0,0,0,0.9)] ${isTarget ? "bottle-fall" : "bottle-idle opacity-45 grayscale-[0.45]"}`}
+                    />
                   </div>
-                ))}
-              </div>
-
-              {/* Game Prompt */}
-              <div className="text-center mb-10">
-                <div className="inline-flex px-8 py-2 rounded-full bg-black/40 border border-[#8c5e3c]/40 min-h-12.5 items-center justify-center">
-                  <h2 className="text-lg md:text-2xl text-[#ffbf75] tracking-wide anim-flicker">
-                    {awaitingStart
-                      ? startPrompt
-                      : dropKey
-                        ? `PRESS [ ${dropKey.toUpperCase()} ]`
-                        : lastMissed
-                          ? "MISSED! STAY SHARP"
-                          : "GET READY..."}
-                  </h2>
                 </div>
-              </div>
-
-              {/* Interaction Zone */}
-              <div className="grid grid-cols-3 gap-4 md:gap-12 relative">
-                {["a", "s", "d"].map((keyLabel) => {
-                  const isTarget = dropKey === keyLabel && !awaitingStart;
-                  return (
-                    <div key={keyLabel} className="flex flex-col items-center">
-                      <button
-                        onClick={() => handleInput(keyLabel)}
-                        className={`relative w-20 h-20 md:w-28 md:h-28 transition-transform active:scale-90 ${isTarget ? "scale-110" : "opacity-70"}`}
-                      >
-                        <img
-                          src={rect18Url}
-                          className={`absolute inset-0 w-full h-full transition-filter duration-300 ${isTarget ? "brightness-125 sepia-[.5] drop-shadow-[0_0_15px_#d9a067]" : "grayscale-[0.3]"}`}
-                          alt=""
-                        />
-                        <span
-                          className={`absolute inset-0 flex items-center justify-center text-3xl md:text-5xl font-black ${isTarget ? "text-white" : "text-[#d9a067]"}`}
-                        >
-                          {keyLabel.toUpperCase()}
-                        </span>
-                      </button>
-
-                      {/* Bottle Track */}
-                      <div className="relative mt-8 h-48 w-full flex items-end justify-center">
-                        <div className="absolute top-0 w-px h-full bg-linear-to-b from-[#8c5e3c]/50 to-transparent" />
-                        <img
-                          src={bottleImage}
-                          alt="bottle"
-                          className={`w-14 md:w-20 h-auto z-10 drop-shadow-[0_20px_20px_rgba(0,0,0,0.9)] 
-                            ${isTarget ? "bottle-fall-ground" : "bottle-idle opacity-40 grayscale-[0.5]"}`}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Footer Logo */}
-        <div className="mt-auto pt-10 w-full flex justify-end opacity-60 hover:opacity-100 transition-opacity">
-          <img src={logoUrl} alt="brand" className="w-28 md:w-36" />
+        <div className="fixed top-6 right-5 z-60 w-64 md:w-72 lg:w-80 border border-[#8c5e3c]/45 rounded-xl bg-[#0a0604]/78 backdrop-blur-md overflow-hidden panel-glow">
+          <div className="px-4 py-2 border-b border-[#8c5e3c]/35 text-[#d9a067] font-bold text-center tracking-widest uppercase text-sm">
+            Round Results
+          </div>
+          <div className="max-h-64 overflow-auto">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <div
+                key={idx}
+                className="px-4 py-2 flex items-center justify-between border-b border-[#8c5e3c]/20 text-sm"
+              >
+                <span className="text-[#d9a067]">Round {idx + 1}</span>
+                <span
+                  className={
+                    roundTimes[idx] === "missed"
+                      ? "text-red-400 font-bold"
+                      : "text-white"
+                  }
+                >
+                  {formatRound(roundTimes[idx])}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="px-4 py-2 text-center text-[#ffbf75] text-sm font-bold">
+            Best:{" "}
+            {typeof bestTime === "number" ? `${Math.round(bestTime)} ms` : "--"}
+          </div>
         </div>
       </div>
     </div>

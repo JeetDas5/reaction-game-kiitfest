@@ -8,8 +8,8 @@ const pickRandomFrom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 export default function useGame({
   TOTAL_ROUNDS = 5,
-  MIN_WAIT = 1200,
-  MAX_WAIT = 3200,
+  MIN_WAIT = 5000,
+  MAX_WAIT = 7000,
   BASE_FALL = 500,
   onFinish,
 } = {}) {
@@ -84,7 +84,7 @@ export default function useGame({
       Math.floor((MAX_WAIT - MIN_WAIT) * 0.8),
     );
     let wait = randomIntBetween(MIN_WAIT, MAX_WAIT) - levelReduction;
-    wait = Math.max(450, wait);
+    wait = Math.max(5000, wait);
     if (dropTimerRef.current) clearTimeout(dropTimerRef.current);
     nextDropAtRef.current = getTimestampMs() + wait;
     setTimeToNextDrop(wait);
@@ -238,6 +238,27 @@ export default function useGame({
     setDropStart(null);
   };
 
+  const forceMiss = () => {
+    if (awaitingStartRef.current || gameFinishedRef.current) return;
+    const currentDrop = dropKeyRef.current;
+    if (!currentDrop) return;
+
+    if (dropTimerRef.current) {
+      clearTimeout(dropTimerRef.current);
+      dropTimerRef.current = null;
+    }
+    if (baselineTimerRef.current) {
+      clearTimeout(baselineTimerRef.current);
+      baselineTimerRef.current = null;
+    }
+
+    dropKeyRef.current = null;
+    dropStartRef.current = null;
+    setDropKey(null);
+    setDropStart(null);
+    recordRound("missed");
+  };
+
   const handleInput = (kRaw) => {
     const k = String(kRaw).toLowerCase();
     if (awaitingStartRef.current) {
@@ -319,6 +340,7 @@ export default function useGame({
     timeToNextDrop,
     startGame,
     stopGame,
+    forceMiss,
     handleInput,
     setAwaitingStart,
     setStartPrompt,

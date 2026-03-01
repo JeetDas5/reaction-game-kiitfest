@@ -58,13 +58,14 @@ export default function Result({ currentUser }) {
       const params = new URLSearchParams(
         location.search || window.location.search,
       );
-      const hasRoll = Boolean(params.get("roll"));
+      const queryKfid = params.get("kfid") || params.get("roll");
+      const hasKfid = Boolean(queryKfid);
       const hasPlayedData =
         Boolean(st.played) ||
         Array.isArray(st.rounds) ||
         typeof st.bestTime === "number";
 
-      if (!hasPlayedData && !hasRoll) {
+      if (!hasPlayedData && !hasKfid) {
         navigate("/game", { replace: true });
         return;
       }
@@ -81,17 +82,17 @@ export default function Result({ currentUser }) {
         setLeaderboard(null);
       }
 
-      if (st && (st.rounds || st.bestTime || st.roll)) {
+      if (st && (st.rounds || st.bestTime || st.kfid || st.roll)) {
         if (st.rounds) setRoundTimes(normalizeRounds(st.rounds));
         if (typeof st.bestTime === "number") setBestTime(st.bestTime);
         return;
       }
 
-      const roll = params.get("roll");
-      if (roll) {
+      const kfid = queryKfid;
+      if (kfid) {
         try {
           const myRes = await fetch(
-            `/api/my-rounds?roll=${encodeURIComponent(roll)}`,
+            `/api/my-rounds?kfid=${encodeURIComponent(kfid)}`,
           );
           if (myRes.ok) {
             const payload = await myRes.json();

@@ -1,180 +1,294 @@
 import express from "express";
 import cors from "cors";
 import axios from "axios";
+
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// generate a KF id of the form 'KF' + 8 digits, ensuring uniqueness
-async function generateUniqueKfId() {
-  while (true) {
-    const num = Math.floor(Math.random() * 1e8).toString().padStart(8, '0');
-    const id = `KF${num}`;
-    const exists = await prisma.user.findUnique({ where: { KFid: id } });
-    if (!exists) return id;
-    // else loop and try again
-  }
-}
+const PAYMENT_VALIDATE_URL = "https://pvs.kiitfest.org/api/validate";
 
-// POST /api/user - upsert a user by roll
+let prisma = null;
+let prismaInitTried = false;
+let prismaInitError = null;
+
+const ensurePrisma = async () => {
+  if (prisma) return prisma;
+  if (prismaInitTried && prismaInitError) return null;
+
+  prismaInitTried = true;
+  try {
+    const prismaModule = await import("@prisma/client");
+    const PrismaClient =
+      prismaModule?.PrismaClient || prismaModule?.default?.PrismaClient;
+
+    if (!PrismaClient) throw new Error("PrismaClient export not found.");
+
+    prisma = new PrismaClient();
+    prismaInitError = null;
+    console.log("[db] Prisma client initialized");
+    return prisma;
+  } catch (error) {
+    prismaInitError = error;
+    console.error("[db] Prisma initialization failed", {
+      message: error?.message || "Unknown Prisma error",
+    });
+    return null;
+  }
+};
+
+const withPrisma = async (res) => {
+  const db = await ensurePrisma();
+  if (db) return db;
+
+  res.status(503).json({
+    ok: false,
+    error:
+      "Database service unavailable. Run `npm run prisma:generate` and restart server.",
+  });
+  return null;
+};
+
+const normalizeKfid = (value) => {
+  if (typeof value !== "string") return "";
+  return value.trim().toUpperCase();
+};
+
+const kfidFromLegacyRoll = (value) => {
+  if (value == null) return "";
+  const text = String(value).trim();
+  if (!/^\d+$/.test(text)) return "";
+  return `KF${text.padStart(8, "0")}`;
+};
+
+const resolveKfid = ({ kfid, rollNo, roll }) => {
+  const direct = normalizeKfid(kfid);
+  if (direct) return direct;
+
+  const fromRollNo = kfidFromLegacyRoll(rollNo);
+  if (fromRollNo) return fromRollNo;
+
+  const fromRoll = kfidFromLegacyRoll(roll);
+  if (fromRoll) return fromRoll;
+
+  return "";
+};
+
+const normalizeRounds = (rounds, totalRounds = 5) => {
+  if (!Array.isArray(rounds)) return null;
+
+  const out = rounds.slice(0, totalRounds).map((r) => {
+    if (r === null || typeof r === "undefined") return null;
+    if (typeof r === "number") return Number(r);
+    if (typeof r === "string") {
+      const n = Number(r);
+      if (!Number.isNaN(n)) return n;
+      return r;
+    }
+    return String(r);
+  });
+
+  while (out.length < totalRounds) out.push(null);
+  return out;
+};
+
+app.post("/api/validate", async (req, res) => {
+  try {
+    const kfid = normalizeKfid(req?.body?.kfid);
+
+    if (!kfid || !/^KF\d{8}$/.test(kfid)) {
+      return res.status(200).json({
+        success: false,
+        message: "Invalid KFID format. Use KF followed by 8 digits.",
+      });
+    }
+
+    const { data } = await axios.post(
+      PAYMENT_VALIDATE_URL,
+      { kfid },
+      {
+        headers: { "Content-Type": "application/json" },
+        timeout: 12000,
+      },
+    );
+
+    return res.status(200).json(data);
+  } catch (error) {
+    const upstreamStatus = error?.response?.status;
+    const upstreamData = error?.response?.data;
+
+    if (upstreamStatus === 200 && upstreamData) {
+      return res.status(200).json(upstreamData);
+    }
+
+    if (upstreamStatus === 500) {
+      return res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
+    }
+
+    const message =
+      upstreamData?.message || error?.message || "Internal server error";
+
+    return res.status(500).json({ success: false, message });
+  }
+});
+
 app.post("/api/user", async (req, res) => {
   try {
     const db = await withPrisma(res);
     if (!db) return;
 
-    const { name, rollNo } = req.body;
-    if (!rollNo) return res.status(400).json({ error: 'rollNo required' });
-    const kfid = await generateUniqueKfId();
-    const user = await prisma.user.upsert({
-      where: { rollNo: Number(rollNo) },
-      update: { name: name || undefined },
-      create: { name: name || `Player ${rollNo}`, rollNo: Number(rollNo), KFid: kfid }
+    const kfid = resolveKfid(req.body || {});
+    if (!kfid || !/^KF\d{8}$/.test(kfid)) {
+      return res.status(400).json({ error: "valid kfid required" });
+    }
+
+    const user = await db.user.upsert({
+      where: { KFid: kfid },
+      update: {},
+      create: { KFid: kfid },
     });
-    return res.json({ ok: true, user });
-  } catch (err) {
-    console.error(err);
+
+    return res.json({ ok: true, user: { id: user.id, kfid: user.KFid } });
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ error: "server error" });
   }
 });
 
-// POST /api/results
-// body: { name, rollNo, bestTime }
 app.post("/api/results", async (req, res) => {
   try {
     const db = await withPrisma(res);
     if (!db) return;
 
-    const { name, rollNo, bestTime, rounds } = req.body;
     const TOTAL_ROUNDS = 5;
-    if (!rollNo) return res.status(400).json({ error: "rollNo required" });
-    // sanitize and normalize rounds array to fixed length
-    let processedRounds = undefined;
-    if (Array.isArray(rounds)) {
-      processedRounds = rounds.slice(0, TOTAL_ROUNDS).map((r) => {
-        if (r === null || typeof r === "undefined") return null;
-        if (typeof r === "number") return Number(r);
-        if (typeof r === "string") {
-          const n = Number(r);
-          if (!Number.isNaN(n)) return n;
-          // keep known string values like 'missed'
-          return r;
-        }
-        return String(r);
-      });
-      // pad with nulls if shorter
-      while (processedRounds.length < TOTAL_ROUNDS) processedRounds.push(null);
+    const { bestTime, rounds } = req.body || {};
+    const kfid = resolveKfid(req.body || {});
+
+    if (!kfid || !/^KF\d{8}$/.test(kfid)) {
+      return res.status(400).json({ error: "valid kfid required" });
     }
-    // upsert user (ensure KFid on create)
-    const kfid = await generateUniqueKfId();
-    await prisma.user.upsert({
-      where: { rollNo: Number(rollNo) },
-      update: { name: name || undefined },
-      create: { name: name || `Player ${rollNo}`, rollNo: Number(rollNo), KFid: kfid }
+
+    const processedRounds = normalizeRounds(rounds, TOTAL_ROUNDS);
+
+    const user = await db.user.upsert({
+      where: { KFid: kfid },
+      update: {},
+      create: { KFid: kfid },
     });
-    // upsert record (store processedRounds if provided)
+
+    const timeValue = Number(bestTime || 0);
+
     const rec = await db.record.upsert({
-      where: { rollNo: Number(rollNo) },
+      where: { userId: user.id },
       update: {
-        time: Number(bestTime || 0),
+        time: timeValue,
         rounds: processedRounds || undefined,
         updatedAt: new Date(),
       },
       create: {
-        rollNo: Number(rollNo),
-        time: Number(bestTime || 0),
+        userId: user.id,
+        time: timeValue,
         rounds: processedRounds || undefined,
       },
     });
-    // store each round as its own row for historical/analytic queries
-    try {
-      const user = await db.user.findUnique({
-        where: { rollNo: Number(rollNo) },
-      });
-      if (user && Array.isArray(processedRounds)) {
-        // upsert each round so existing rows are updated and new ones inserted
-        for (const [idx, val] of processedRounds.entries()) {
-          const rn = idx + 1;
-          const data = {
-            roundNumber: rn,
-            time: typeof val === "number" ? val : null,
-            value: typeof val === "string" ? val : null,
-            metadata: typeof val === "object" && val !== null ? val : null,
-            userId: user.id,
-          };
-          try {
-            await db.round.upsert({
-              where: {
-                userId_roundNumber: { userId: user.id, roundNumber: rn },
-              },
-              update: {
-                time: data.time,
-                value: data.value,
-                metadata: data.metadata,
-              },
-              create: data,
-            });
-          } catch (e) {
-            console.error(
-              `Failed upserting round ${rn} for user ${user.id}`,
-              e,
-            );
-          }
+
+    if (Array.isArray(processedRounds)) {
+      for (const [index, val] of processedRounds.entries()) {
+        const roundNumber = index + 1;
+        const data = {
+          userId: user.id,
+          roundNumber,
+          time: typeof val === "number" ? val : null,
+          value: typeof val === "string" ? val : null,
+          metadata: typeof val === "object" && val !== null ? val : null,
+        };
+
+        try {
+          await db.round.upsert({
+            where: {
+              userId_roundNumber: { userId: user.id, roundNumber },
+            },
+            update: {
+              time: data.time,
+              value: data.value,
+              metadata: data.metadata,
+            },
+            create: data,
+          });
+        } catch (error) {
+          console.error(
+            `Failed upserting round ${roundNumber} for user ${user.id}`,
+            error,
+          );
         }
       }
-    } catch (e) {
-      console.error("Failed to persist rounds to Round table", e);
     }
-    // return success
-    return res.json({ ok: true, record: rec });
-  } catch (err) {
-    console.error(err);
+
+    return res.json({
+      ok: true,
+      kfid: user.KFid,
+      bestTime: rec.time,
+      record: rec,
+    });
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ error: "server error" });
   }
 });
 
-// GET /api/leaderboard - returns top 10 by best time (ascending)
 app.get("/api/leaderboard", async (req, res) => {
   try {
     const db = await withPrisma(res);
     if (!db) return;
 
-    // only include users with a positive recorded time
     const rows = await db.record.findMany({
       where: { time: { gt: 0 } },
       orderBy: { time: "asc" },
       take: 10,
       include: { user: true },
     });
+
     const data = rows.map((r, idx) => ({
       rank: idx + 1,
-      name: r.user?.name || "--",
-      rollnumber: r.rollNo,
+      kfid: r.user?.KFid || "--",
       bestTime: typeof r.time === "number" ? r.time : null,
       rounds: r.rounds || null,
     }));
+
     return res.json({ ok: true, data });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ error: "server error" });
   }
 });
 
-// GET /api/my-rounds?roll=123
 app.get("/api/my-rounds", async (req, res) => {
   try {
     const db = await withPrisma(res);
     if (!db) return;
 
     const TOTAL_ROUNDS = 5;
-    const roll = Number(req.query.roll || 0);
-    if (!roll) return res.status(400).json({ error: "roll query required" });
-    // prefer fetching per-round rows from Round table
-    const user = await db.user.findUnique({ where: { rollNo: roll } });
-    if (!user) return res.json({ ok: true, rounds: null, bestTime: null });
+    const kfid = resolveKfid({
+      kfid: req.query.kfid,
+      roll: req.query.roll,
+      rollNo: req.query.rollNo,
+    });
+
+    if (!kfid) {
+      return res.status(400).json({ error: "kfid query required" });
+    }
+
+    const user = await db.user.findUnique({ where: { KFid: kfid } });
+    if (!user)
+      return res.json({ ok: true, kfid, rounds: null, bestTime: null });
+
     const roundsRows = await db.round.findMany({
       where: { userId: user.id },
       orderBy: { roundNumber: "asc" },
     });
+
     let roundsOut = null;
     if (Array.isArray(roundsRows) && roundsRows.length > 0) {
       roundsOut = roundsRows
@@ -182,21 +296,32 @@ app.get("/api/my-rounds", async (req, res) => {
         .map((r) => (r.time === null ? r.value : r.time));
       while (roundsOut.length < TOTAL_ROUNDS) roundsOut.push(null);
     } else {
-      // fallback to legacy record JSON field
-      const rec = await db.record.findUnique({ where: { rollNo: roll } });
+      const rec = await db.record.findUnique({ where: { userId: user.id } });
       if (rec && Array.isArray(rec.rounds)) {
         roundsOut = rec.rounds.slice(0, TOTAL_ROUNDS);
         while (roundsOut.length < TOTAL_ROUNDS) roundsOut.push(null);
       }
     }
-    const rec = await db.record.findUnique({ where: { rollNo: roll } });
+
+    const rec = await db.record.findUnique({ where: { userId: user.id } });
+
+    let rank = null;
+    if (rec && typeof rec.time === "number" && rec.time > 0) {
+      const betterCount = await db.record.count({
+        where: { time: { gt: 0, lt: rec.time } },
+      });
+      rank = betterCount + 1;
+    }
+
     return res.json({
       ok: true,
+      kfid,
       rounds: roundsOut || null,
       bestTime: rec?.time || null,
+      rank,
     });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ error: "server error" });
   }
 });

@@ -15,7 +15,6 @@ model User {
   rounds Round[]
 
   @@index([id, KFid])
-  @@check(KFid ~ '^KF[0-9]{8}$')
 }
 
 model Record {

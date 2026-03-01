@@ -43,7 +43,7 @@ function normalizeRounds(rt) {
   return out;
 }
 
-const App = () => {
+const App = ({ currentUser }) => {
   const navigate = useNavigate();
 
   const bgUrl = encodeURI("/Screenshot 2026-02-22 145019 2.svg");
@@ -63,6 +63,10 @@ const App = () => {
   const [canViewResults, setCanViewResults] = useState(false);
   const pressedKeysRef = useRef(new Set());
   const pressedMouseKeysRef = useRef(new Set());
+  const currentKfid =
+    currentUser && typeof currentUser.kfid === "string"
+      ? currentUser.kfid.trim().toUpperCase()
+      : "";
 
   const {
     activeKey,
@@ -93,7 +97,8 @@ const App = () => {
         state: {
           rounds: newRounds,
           bestTime: computedBest,
-          roll: lastRoll || "",
+          kfid: currentKfid || lastRoll || "",
+          played: true,
         },
       });
     },
@@ -160,25 +165,24 @@ const App = () => {
   };
 
   async function persistResults(newRounds, computedBest) {
-    const roll = lastRoll || "";
-    if (!roll) return;
+    const kfid = currentKfid || lastRoll || "";
+    if (!kfid) return;
 
     try {
       await fetch("/api/results", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: `Player ${roll}`,
-          rollNo: roll,
+          kfid,
           bestTime: computedBest,
           rounds: newRounds,
         }),
       });
 
       try {
-        setLastRoll(String(roll));
+        setLastRoll(String(kfid));
         const response = await fetch(
-          "/api/my-rounds?roll=" + encodeURIComponent(roll),
+          "/api/my-rounds?kfid=" + encodeURIComponent(kfid),
         );
         if (response.ok) {
           const payload = await response.json();
@@ -195,12 +199,13 @@ const App = () => {
   }
 
   useEffect(() => {
-    if (!lastRoll) return;
+    const kfid = currentKfid || lastRoll || "";
+    if (!kfid) return;
 
     (async () => {
       try {
         const response = await fetch(
-          "/api/my-rounds?roll=" + encodeURIComponent(lastRoll),
+          "/api/my-rounds?kfid=" + encodeURIComponent(kfid),
         );
         if (response.ok) {
           const payload = await response.json();
@@ -212,7 +217,7 @@ const App = () => {
         console.error("Failed loading rounds for lastRoll", error);
       }
     })();
-  }, [lastRoll, setRoundTimes]);
+  }, [currentKfid, lastRoll, setRoundTimes]);
 
   useEffect(() => {
     const pressedMouseKeys = pressedMouseKeysRef.current;
@@ -680,7 +685,8 @@ const App = () => {
                     state: {
                       rounds: roundTimes,
                       bestTime,
-                      roll: lastRoll || "",
+                      kfid: currentKfid || lastRoll || "",
+                      played: true,
                     },
                   });
                 } catch (error) {

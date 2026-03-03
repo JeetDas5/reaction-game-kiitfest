@@ -44,5 +44,4 @@ model Round {
   createdAt DateTime @default(now())
 
   @@unique([userId, roundNumber], name: "userId_roundNumber")
-  @@index([userId, roundNumber])
 }

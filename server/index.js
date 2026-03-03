@@ -153,7 +153,11 @@ app.post(INTERNAL_VALIDATE_PATH, async (req, res) => {
       }
     );
 
-    if (data?.success === false && isPaymentNotCompleted(data)) {
+    // Check all payment failure cases before generic failures
+    if (
+      isPaymentNotCompleted(data) ||
+      (data?.data && data.data.paid === false)
+    ) {
       return res.status(402).json({
         ...data,
         success: false,
@@ -171,15 +175,6 @@ app.post(INTERNAL_VALIDATE_PATH, async (req, res) => {
       });
     }
 
-    if (data?.data && data.data.paid === false) {
-      return res.status(402).json({
-        ...data,
-        success: false,
-        code: "PAYMENT_NOT_COMPLETED",
-        message: data?.message || "Payment is not completed for this KFID.",
-      });
-    }
-
     // Try to update/create user in database with the returned name
     try {
       const db = await ensurePrisma();
@@ -193,8 +188,8 @@ app.post(INTERNAL_VALIDATE_PATH, async (req, res) => {
           });
         }
       }
-    } catch (ignore) {
-      // ignore user save fail here so validation still succeeds
+    } catch (error) {
+      console.error("Error updating user in database:", error);
     }
 
     return res.status(200).json(data);

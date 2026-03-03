@@ -46,7 +46,7 @@ export default function Authenticate({ setCurrentUser }) {
 
     if (!/^KF\d{8}$/.test(normalizedKfid)) {
       setErrorMessage(
-        "KFID must be in format KF + 8 digits (e.g. KF12345678).",
+        "KFID must be in format KF + 8 digits (e.g. KF12345678)."
       );
       return;
     }
@@ -61,7 +61,7 @@ export default function Authenticate({ setCurrentUser }) {
         {
           kfid: normalizedKfid,
         },
-        { timeout: 12000 },
+        { timeout: 12000 }
       );
       const data = response?.data || null;
 
@@ -88,7 +88,7 @@ export default function Authenticate({ setCurrentUser }) {
 
       if (code === "PAYMENT_NOT_COMPLETED" || status === 402) {
         setErrorMessage(
-          backendMessage || "Payment is not completed for this KFID.",
+          backendMessage || "Payment is not completed for this KFID."
         );
         return;
       }
@@ -110,7 +110,7 @@ export default function Authenticate({ setCurrentUser }) {
         networkCode === "ERR_NETWORK"
       ) {
         setErrorMessage(
-          "Validation service unreachable. Please check internet/server and try again.",
+          "Validation service unreachable. Please check internet/server and try again."
         );
         return;
       }
@@ -168,6 +168,7 @@ export default function Authenticate({ setCurrentUser }) {
       <a
         href="https://kiitfest.org"
         target="_blank"
+        rel="nooppener noreferrer"
         className="absolute top-0 left-0 w-full flex justify-center z-50 anim-float"
         style={{ paddingTop: logoTop }}
       >

@@ -10,6 +10,7 @@ import Homepage from "./Homepage";
 import Game from "./Game";
 import Result from "./result";
 import Leaderboard from "./Leaderboard";
+import Admin from "./Admin";
 import ProtectedRoute from "./middleware/ProtectedRoute";
 
 export default function App() {
@@ -65,6 +66,15 @@ export default function App() {
             element={
               <ProtectedRoute currentUser={currentUser}>
                 <Leaderboard currentUser={currentUser} />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute currentUser={currentUser}>
+                <Admin currentUser={currentUser} />
               </ProtectedRoute>
             }
           />

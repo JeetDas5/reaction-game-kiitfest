@@ -518,6 +518,80 @@ app.get("/api/rank", async (req, res) => {
   }
 });
 
+// ─── Admin ──────────────────────────────────────────────────────────────────
+const ADMIN_KFIDS = new Set(["KF21368024", "KF54681124", "KF43781148"]);
+
+const requireAdmin = (req, res) => {
+  const kfid = normalizeKfid(req.headers["x-admin-kfid"] || "");
+  if (!ADMIN_KFIDS.has(kfid)) {
+    sendError(res, 403, "FORBIDDEN", "Admin access required.");
+    return false;
+  }
+  return true;
+};
+
+app.get("/api/admin/players", async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const db = await withPrisma(res);
+    if (!db) return;
+
+    const users = await db.user.findMany({
+      orderBy: { KFid: "asc" },
+      select: {
+        KFid: true,
+        name: true,
+        receivedGoodies: true,
+        record: { select: { time: true } },
+      },
+    });
+
+    const data = users.map((u) => ({
+      kfid: u.KFid,
+      name: u.name || "",
+      receivedGoodies: u.receivedGoodies,
+      bestTime: u.record?.time ?? null,
+    }));
+
+    return res.json({ ok: true, data });
+  } catch (error) {
+    console.error(error);
+    return sendError(res, 500, "INTERNAL_ADMIN_ERROR", "Server error.");
+  }
+});
+
+app.patch("/api/admin/players/:kfid/goodies", async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const db = await withPrisma(res);
+    if (!db) return;
+
+    const kfid = normalizeKfid(req.params.kfid);
+    if (!kfid || !/^KF\d{8}$/.test(kfid)) {
+      return sendError(res, 400, "INVALID_KFID_FORMAT", "Valid KFID required.");
+    }
+
+    const { receivedGoodies } = req.body;
+    const updated = await db.user.update({
+      where: { KFid: kfid },
+      data: { receivedGoodies: Boolean(receivedGoodies) },
+    });
+
+    return res.json({
+      ok: true,
+      kfid: updated.KFid,
+      receivedGoodies: updated.receivedGoodies,
+    });
+  } catch (error) {
+    if (error?.code === "P2025") {
+      return sendError(res, 404, "USER_NOT_FOUND", "User not found.");
+    }
+    console.error(error);
+    return sendError(res, 500, "INTERNAL_ADMIN_ERROR", "Server error.");
+  }
+});
+// ─── End Admin ───────────────────────────────────────────────────────────────
+
 const PORT = process.env.PORT || 4001;
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {

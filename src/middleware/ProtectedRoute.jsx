@@ -7,6 +7,8 @@ export default function ProtectedRoute({ currentUser, children }) {
     typeof currentUser.kfid === "string" &&
     currentUser.kfid.trim().length > 0;
 
+  console.log("Authenticated", isAuthenticated);
+
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
   }

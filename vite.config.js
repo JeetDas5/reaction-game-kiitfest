@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "https://kiitfest-reaction-game.onrender.com",
+        target: "http://localhost:4001",
         changeOrigin: true,
       },
     },

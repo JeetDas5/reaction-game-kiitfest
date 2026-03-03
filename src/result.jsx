@@ -116,6 +116,11 @@ export default function Result({ currentUser }) {
 
   useEffect(() => {
     const redirectTimer = setTimeout(() => {
+      try {
+        sessionStorage.removeItem("kf_current_user");
+      } catch(error) {
+        console.log("Something went wrong", error)
+      }
       navigate("/", { replace: true });
     }, 30000);
 
@@ -128,20 +133,12 @@ export default function Result({ currentUser }) {
     : null;
 
   const handleRestart = () => {
-    const kfid =
-      ((location && location.state) || {}).kfid ||
-      new URLSearchParams(location.search).get("kfid") ||
-      (currentUser && currentUser.kfid);
-
-    if (kfid) {
-      if (currentUser && currentUser.kfid) {
-        navigate("/game", { replace: true });
-      } else {
-        navigate(`/?roll=${kfid}`, { replace: true });
-      }
-    } else {
-      navigate("/", { replace: true });
+    try {
+      sessionStorage.removeItem("kf_current_user");
+    } catch(error) {
+      console.log("Something went wrong", error)
     }
+    navigate("/", { replace: true });
   };
 
   return (

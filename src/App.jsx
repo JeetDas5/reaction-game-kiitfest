@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -13,10 +13,30 @@ import Leaderboard from "./Leaderboard";
 import Admin from "./Admin";
 import ProtectedRoute from "./middleware/ProtectedRoute";
 
+const SESSION_KEY = "kf_current_user";
+
+function loadSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { kfid: "" };
+}
+
 export default function App() {
-  const [currentUser, setCurrentUser] = useState({
-    kfid: "",
-  });
+  const [currentUser, setCurrentUserState] = useState(loadSession);
+
+  // Wrap setter so every auth update is also persisted to sessionStorage
+  const setCurrentUser = useCallback((user) => {
+    setCurrentUserState(user);
+    try {
+      if (user && user.kfid) {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
+      } else {
+        sessionStorage.removeItem(SESSION_KEY);
+      }
+    } catch {}
+  }, []);
 
   return (
     <div className="overflow-hidden antialiased text-neutral-200 selection:bg-neutral-200 selection:text-neutral-800 w-full h-full">

@@ -3,7 +3,7 @@ import cors from "cors";
 import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
-const PAYMENT_VALIDATE_URL = process.env.PAYMENT_VALIDATE_URL;
+const PAYMENT_VALIDATE_URL = process.env.VITE_PAYMENT_VALIDATE_URL;
 const INTERNAL_VALIDATE_PATH = "/api/validate";
 const PAYMENT_NOT_DONE_REGEX =
   /(payment.*not.*done|not paid|payment.*pending|unpaid)/i;

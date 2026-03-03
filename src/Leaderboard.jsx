@@ -2,38 +2,42 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import kiitfestImg from "./assets/kiitfest-main-logo20.png";
 
-export default function Leaderboard() {
+export default function Leaderboard({ currentUser }) {
   const navigate = useNavigate();
   const [leaderboard, setLeaderboard] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/leaderboard");
+        const res = await fetch(`/api/leaderboard?page=${page}`);
         if (res.ok) {
           const json = await res.json();
           if (json && Array.isArray(json.data)) {
-            console.log("data: ",json)
-            setLeaderboard(json.data.slice(0, 10));
+            setLeaderboard(json.data);
+            if (json.totalPages) setTotalPages(json.totalPages);
           }
         }
       } catch {
         // ignore
       }
     })();
-  }, []);
+  }, [page]);
 
   const rows =
     leaderboard.length > 0
-      ? leaderboard.map((entry, idx) => ({
-          rank: idx + 1,
+      ? leaderboard.map((entry) => ({
+          rank: entry.rank,
           name: entry.name || "--",
+          kfid: entry.kfid || "",
           bestTime:
             entry.bestTime != null ? `${Math.round(entry.bestTime)} ms` : "--",
         }))
       : Array.from({ length: 10 }).map((_, idx) => ({
-          rank: idx + 1,
+          rank: (page - 1) * 10 + idx + 1,
           name: "--",
+          kfid: "",
           bestTime: "--",
         }));
 
@@ -88,24 +92,61 @@ export default function Leaderboard() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr
-                    key={row.rank}
-                    className="border-t border-[#8c5e3c]/30 hover:bg-white/5"
-                  >
-                    <td className="py-2.5 px-3 text-white font-bold">
-                      {row.rank}
-                    </td>
-                    <td className="py-2.5 px-3 text-white tracking-widest">
-                      {row.name}
-                    </td>
-                    <td className="py-2.5 px-3 text-right text-[#ffbf75] font-bold">
-                      {row.bestTime}
-                    </td>
-                  </tr>
-                ))}
+                {rows.map((row) => {
+                  const isCurrent =
+                    currentUser &&
+                    currentUser.kfid &&
+                    row.kfid &&
+                    row.kfid.toUpperCase() === currentUser.kfid.toUpperCase();
+                  return (
+                    <tr
+                      key={row.rank}
+                      className={`border-t border-[#8c5e3c]/30 hover:bg-white/5 transition-colors ${
+                        isCurrent ? "bg-[#8c5e3c]/40" : ""
+                      }`}
+                    >
+                      <td className="py-2.5 px-3 text-white font-bold">
+                        {row.rank}
+                      </td>
+                      <td className="py-2.5 px-3 text-white tracking-widest">
+                        {row.name}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-[#ffbf75] font-bold">
+                        {row.bestTime}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+
+          <div className="flex justify-between items-center mt-6">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className={`px-4 py-2 border rounded-lg tracking-widest transition-colors ${
+                page === 1
+                  ? "border-[#8c5e3c]/30 text-[#8c5e3c]/50 cursor-not-allowed"
+                  : "border-[#8c5e3c]/50 text-[#d9a067] hover:bg-[#8c5e3c]/20 cursor-pointer"
+              }`}
+            >
+              PREV
+            </button>
+            <div className="text-[#d9a067] tracking-widest">
+              PAGE {page} OF {totalPages}
+            </div>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className={`px-4 py-2 border rounded-lg tracking-widest transition-colors ${
+                page >= totalPages
+                  ? "border-[#8c5e3c]/30 text-[#8c5e3c]/50 cursor-not-allowed"
+                  : "border-[#8c5e3c]/50 text-[#d9a067] hover:bg-[#8c5e3c]/20 cursor-pointer"
+              }`}
+            >
+              NEXT
+            </button>
           </div>
         </div>
       </div>

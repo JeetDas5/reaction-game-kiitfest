@@ -10,7 +10,7 @@ export default function Result({ currentUser }) {
 
   const [roundTimes, setRoundTimes] = useState(null);
   const [bestTime, setBestTime] = useState(null);
-  const [leaderboard, setLeaderboard] = useState(null);
+  const [myRank, setMyRank] = useState(null);
   const rect37Url = encodeURI("/Rectangle 37.svg");
 
   function normalizeRounds(rt) {
@@ -69,21 +69,22 @@ export default function Result({ currentUser }) {
         return;
       }
 
-      try {
-        const res = await fetch("/api/leaderboard");
-        if (res.ok) {
-          const json = await res.json();
-          if (json && Array.isArray(json.data)) {
-            setLeaderboard(json.data.slice(0, 10));
+      const fetchRank = async (time) => {
+        try {
+          const rankRes = await fetch(`/api/rank?time=${time}`);
+          if (rankRes.ok) {
+            const rankData = await rankRes.json();
+            setMyRank(rankData.rank);
           }
-        }
-      } catch {
-        setLeaderboard(null);
-      }
+        } catch {}
+      };
 
       if (st && (st.rounds || st.bestTime || st.kfid || st.roll)) {
         if (st.rounds) setRoundTimes(normalizeRounds(st.rounds));
-        if (typeof st.bestTime === "number") setBestTime(st.bestTime);
+        if (typeof st.bestTime === "number") {
+          setBestTime(st.bestTime);
+          await fetchRank(st.bestTime);
+        }
         return;
       }
 
@@ -99,6 +100,7 @@ export default function Result({ currentUser }) {
               setRoundTimes(normalizeRounds(payload.rounds));
             if (payload && typeof payload.bestTime === "number") {
               setBestTime(payload.bestTime);
+              await fetchRank(payload.bestTime);
             }
             return;
           }
@@ -120,60 +122,27 @@ export default function Result({ currentUser }) {
     return () => clearTimeout(redirectTimer);
   }, [navigate]);
 
-  const currentName = useMemo(() => {
-    const st = (location && location.state) || {};
-    if (typeof st.name === "string" && st.name.trim()) return st.name.trim();
-    if (
-      currentUser &&
-      typeof currentUser.name === "string" &&
-      currentUser.name.trim()
-    ) {
-      return currentUser.name.trim();
-    }
-    return "--";
-  }, [location, currentUser]);
-
-  const myRank = useMemo(() => {
-    if (bestTime == null) return null;
-    const times = [];
-    if (Array.isArray(leaderboard)) {
-      leaderboard.forEach((entry) => {
-        if (entry && typeof entry.bestTime === "number")
-          times.push(entry.bestTime);
-      });
-    }
-    times.push(bestTime);
-    times.sort((a, b) => a - b);
-    const idx = times.indexOf(bestTime);
-    return idx >= 0 ? idx + 1 : null;
-  }, [leaderboard, bestTime]);
-
   const numericTimes = (roundTimes || []).filter((r) => typeof r === "number");
   const avg = numericTimes.length
     ? Math.round(numericTimes.reduce((a, b) => a + b, 0) / numericTimes.length)
     : null;
 
-  const rows = useMemo(() => {
-    if (Array.isArray(leaderboard) && leaderboard.length > 0) {
-      return leaderboard.map((entry, idx) => ({
-        rank: idx + 1,
-        name: (entry && entry.name) || "--",
-        bestTime:
-          entry && typeof entry.bestTime === "number"
-            ? `${Math.round(entry.bestTime)} ms`
-            : "--",
-      }));
-    }
+  const handleRestart = () => {
+    const kfid =
+      ((location && location.state) || {}).kfid ||
+      new URLSearchParams(location.search).get("kfid") ||
+      (currentUser && currentUser.kfid);
 
-    return Array.from({ length: 10 }).map((_, idx) => ({
-      rank: idx + 1,
-      name: idx + 1 === (myRank || -1) ? currentName : "--",
-      bestTime:
-        idx + 1 === (myRank || -1) && typeof bestTime === "number"
-          ? `${Math.round(bestTime)} ms`
-          : "--",
-    }));
-  }, [leaderboard, myRank, currentName, bestTime]);
+    if (kfid) {
+      if (currentUser && currentUser.kfid) {
+        navigate("/game", { replace: true });
+      } else {
+        navigate(`/?roll=${kfid}`, { replace: true });
+      }
+    } else {
+      navigate("/", { replace: true });
+    }
+  };
 
   return (
     <div
@@ -236,34 +205,19 @@ export default function Result({ currentUser }) {
             ))}
           </div>
 
-          <div className="rounded-2xl border border-[#8c5e3c]/55 bg-black/45 overflow-hidden">
-            <div className="px-5 py-3 border-b border-[#8c5e3c]/45 text-[#d9a067] text-lg md:text-2xl font-bold tracking-widest uppercase text-center">
+          <div className="flex flex-col md:flex-row gap-4 justify-center items-center mt-6">
+            <button
+              onClick={handleRestart}
+              className="px-8 py-3 bg-[#8c5e3c]/80 hover:bg-[#8c5e3c] border border-[#ffbf75]/40 text-[#ffbf75] text-lg md:text-xl font-bold rounded-xl transition-all shadow-[0_4px_12px_rgba(0,0,0,0.5)] tracking-widest uppercase cursor-pointer"
+            >
+              Restart Game
+            </button>
+            <button
+              onClick={() => navigate("/leaderboard")}
+              className="px-8 py-3 bg-black/60 hover:bg-black/80 border border-[#8c5e3c]/60 text-[#d9a067] text-lg md:text-xl font-bold rounded-xl transition-all shadow-[0_4px_12px_rgba(0,0,0,0.5)] tracking-widest uppercase cursor-pointer"
+            >
               Leaderboard
-            </div>
-
-            <table className="w-full text-sm md:text-base">
-              <thead>
-                <tr className="bg-black/30 text-[#d9a067] uppercase tracking-[0.2em] text-[11px] md:text-xs">
-                  <th className="py-3 px-3 text-left">Rank</th>
-                  <th className="py-3 px-3 text-left">Name</th>
-                  <th className="py-3 px-3 text-right">Best Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr
-                    key={row.rank}
-                    className="border-t border-[#8c5e3c]/30 hover:bg-white/5"
-                  >
-                    <td className="py-2.5 px-3 text-white">{row.rank}</td>
-                    <td className="py-2.5 px-3 text-white">{row.name}</td>
-                    <td className="py-2.5 px-3 text-right text-[#ffbf75]">
-                      {row.bestTime}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            </button>
           </div>
         </div>
       </div>

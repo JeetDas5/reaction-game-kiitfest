@@ -383,24 +383,37 @@ app.get("/api/leaderboard", async (req, res) => {
     const db = await withPrisma(res);
     if (!db) return;
 
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = 10;
+    const skip = (page - 1) * limit;
+
+    const totalCount = await db.record.count({
+      where: { time: { gt: 0 } },
+    });
+
     const rows = await db.record.findMany({
       where: { time: { gt: 0 } },
       orderBy: { time: "asc" },
-      take: 10,
+      skip,
+      take: limit,
       include: { user: true },
     });
 
     const data = rows.map((r, idx) => ({
-      rank: idx + 1,
+      rank: skip + idx + 1,
       kfid: r.user?.KFid || "--",
       name: r.user?.name || "",
       bestTime: typeof r.time === "number" ? r.time : null,
       rounds: r.rounds || null,
     }));
 
-    console.log("data: ", data);
-
-    return res.json({ ok: true, data });
+    return res.json({
+      ok: true,
+      data,
+      page,
+      totalPages: Math.ceil(totalCount / limit),
+      totalCount,
+    });
   } catch (error) {
     console.error(error);
     return sendError(
@@ -475,6 +488,32 @@ app.get("/api/my-rounds", async (req, res) => {
       500,
       "INTERNAL_ROUNDS_API_ERROR",
       "Server error while loading rounds."
+    );
+  }
+});
+
+app.get("/api/rank", async (req, res) => {
+  try {
+    const db = await withPrisma(res);
+    if (!db) return;
+
+    const timeValue = Number(req.query.time);
+    if (isNaN(timeValue) || timeValue <= 0) {
+      return res.json({ ok: true, rank: null });
+    }
+
+    const betterCount = await db.record.count({
+      where: { time: { gt: 0, lt: timeValue } },
+    });
+
+    return res.json({ ok: true, rank: betterCount + 1 });
+  } catch (error) {
+    console.error(error);
+    return sendError(
+      res,
+      500,
+      "INTERNAL_RANK_API_ERROR",
+      "Server error while loading rank."
     );
   }
 });

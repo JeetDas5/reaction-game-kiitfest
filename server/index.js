@@ -519,7 +519,7 @@ app.get("/api/rank", async (req, res) => {
 });
 
 // ─── Admin ──────────────────────────────────────────────────────────────────
-const ADMIN_KFIDS = new Set(["KF21368024", "KF54681124", "KF43781148"]);
+const ADMIN_KFIDS = new Set(["KF21368024", "KF54681124", "KF43781148", "KF68684824"]);
 
 const requireAdmin = (req, res) => {
   const kfid = normalizeKfid(req.headers["x-admin-kfid"] || "");

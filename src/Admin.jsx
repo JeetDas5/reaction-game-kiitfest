@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import kiitfestImg from "./assets/kiitfest-main-logo20.png";
 
-const ADMIN_KFIDS = new Set(["KF21368024", "KF54681124", "KF43781148"]);
+const ADMIN_KFIDS = new Set(["KF21368024", "KF54681124", "KF43781148", "KF68684824"]);
 
 export default function Admin({ currentUser }) {
   const navigate = useNavigate();
